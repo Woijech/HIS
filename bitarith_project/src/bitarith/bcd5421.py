@@ -5,6 +5,7 @@ from typing import Dict, List, Tuple
 WIDTH = 32
 NIBBLES = 8
 NIBBLE_BITS = 4
+WEIGHTS = (5, 4, 2, 1)
 
 # 5421 weights correspond to bits [b3,b2,b1,b0] => [5,4,2,1]
 # Encode digits by choosing the natural weight decomposition.
@@ -22,9 +23,42 @@ DIGIT_TO_NIBBLE: Dict[int, List[int]] = {
 }
 
 NIBBLE_TO_DIGIT: Dict[Tuple[int, int, int, int], int] = {tuple(v): k for k, v in DIGIT_TO_NIBBLE.items()}
+VALID_NIBBLE_INTS = {
+    (bits[0] << 3) | (bits[1] << 2) | (bits[2] << 1) | bits[3]
+    for bits in DIGIT_TO_NIBBLE.values()
+}
+VALUE_TO_NIBBLE_INT: Dict[int, int] = {
+    WEIGHTS[0] * bits[0] + WEIGHTS[1] * bits[1] + WEIGHTS[2] * bits[2] + WEIGHTS[3] * bits[3]:
+        (bits[0] << 3) | (bits[1] << 2) | (bits[2] << 1) | bits[3]
+    for bits in DIGIT_TO_NIBBLE.values()
+}
+
+ADD_5421_TABLE: Dict[Tuple[int, int, int], Tuple[int, int]] = {}
+for a_nib in VALID_NIBBLE_INTS:
+    a_val = WEIGHTS[0] * ((a_nib >> 3) & 1) + WEIGHTS[1] * ((a_nib >> 2) & 1) + WEIGHTS[2] * ((a_nib >> 1) & 1) + WEIGHTS[3] * (a_nib & 1)
+    for b_nib in VALID_NIBBLE_INTS:
+        b_val = WEIGHTS[0] * ((b_nib >> 3) & 1) + WEIGHTS[1] * ((b_nib >> 2) & 1) + WEIGHTS[2] * ((b_nib >> 1) & 1) + WEIGHTS[3] * (b_nib & 1)
+        for carry_in in (0, 1):
+            total = a_val + b_val + carry_in
+            carry_out = 1 if total >= 10 else 0
+            digit_out = total - 10 if total >= 10 else total
+            ADD_5421_TABLE[(a_nib, b_nib, carry_in)] = (VALUE_TO_NIBBLE_INT[digit_out], carry_out)
+
+
+def _nibble_bits_to_int(bits4: List[int]) -> int:
+    """Convert 4 separate bits [b3,b2,b1,b0] to a 0..15 integer."""
+    if len(bits4) != NIBBLE_BITS:
+        raise ValueError("expected 4 bits")
+    return (bits4[0] << 3) | (bits4[1] << 2) | (bits4[2] << 1) | bits4[3]
+
+
+def _int_to_nibble_bits(n: int) -> List[int]:
+    """Convert 0..15 integer to 4 bits [b3,b2,b1,b0]."""
+    return [(n >> 3) & 1, (n >> 2) & 1, (n >> 1) & 1, n & 1]
 
 
 def _normalize_decimal_str(s: str) -> str:
+    """Validate and strip leading zeros from a decimal string."""
     if not s:
         raise ValueError("empty string")
     if any(ch < "0" or ch > "9" for ch in s):
@@ -50,6 +84,7 @@ def encode_5421_bcd(decimal_digits: str) -> List[int]:
 
 
 def _decode_8_digits(bits32: List[int]) -> List[int]:
+    """Decode 32 bits into 8 decimal digits; validates each 5421 nibble."""
     if len(bits32) != WIDTH:
         raise ValueError("expected 32 bits")
     digits: List[int] = []
@@ -63,6 +98,7 @@ def _decode_8_digits(bits32: List[int]) -> List[int]:
 
 
 def decode_5421_bcd(bits32: List[int]) -> str:
+    """Decode 32-bit 5421 BCD into a normalized decimal string."""
     digits = _decode_8_digits(bits32)
     out_digits = [chr(ord("0") + d) for d in digits]
     # strip leading zeros
@@ -71,21 +107,19 @@ def decode_5421_bcd(bits32: List[int]) -> str:
 
 
 def add_5421_bcd(a_bits: List[int], b_bits: List[int]) -> Tuple[List[int], bool]:
-    """Add two 32-bit 5421-BCD numbers (8 digits). Returns (sum_bits32, overflow)."""
-    a_digits = _decode_8_digits(a_bits)
-    b_digits = _decode_8_digits(b_bits)
+    """Add two 32-bit 5421-BCD numbers in 5421 code. Returns (sum_bits32, overflow)."""
+    if len(a_bits) != WIDTH or len(b_bits) != WIDTH:
+        raise ValueError("expected 32 bits")
 
     carry = 0
-    res_digits = [0] * NIBBLES
-    for i in range(NIBBLES - 1, -1, -1):
-        total = a_digits[i] + b_digits[i] + carry
-        if total >= 10:
-            total -= 10
-            carry = 1
-        else:
-            carry = 0
-        res_digits[i] = total
+    res_bits = [0] * WIDTH
+    for i in range(WIDTH - NIBBLE_BITS, -1, -NIBBLE_BITS):
+        a_nib = _nibble_bits_to_int(a_bits[i : i + NIBBLE_BITS])
+        b_nib = _nibble_bits_to_int(b_bits[i : i + NIBBLE_BITS])
+        if a_nib not in VALID_NIBBLE_INTS or b_nib not in VALID_NIBBLE_INTS:
+            raise ValueError("invalid 5421 nibble")
+        res_nib, carry = ADD_5421_TABLE[(a_nib, b_nib, carry)]
+        res_bits[i : i + NIBBLE_BITS] = _int_to_nibble_bits(res_nib)
 
     overflow = carry != 0
-    res_str = "".join(chr(ord("0") + d) for d in res_digits)
-    return encode_5421_bcd(res_str), overflow
+    return res_bits, overflow

@@ -1,27 +1,56 @@
 from __future__ import annotations
 
+import os
+import sys
 from typing import List
 
-from .int_codes import (
-    int_to_sign_magnitude,
-    int_to_ones_complement,
-    int_to_twos_complement,
-    sign_magnitude_to_int,
-    ones_complement_to_int,
-    twos_complement_to_int,
-    twos_add,
-    twos_subtract,
-)
-from .sign_magnitude_ops import signmag_multiply, signmag_divide_fixed5
-from .ieee754 import (
-    decimal_str_to_ieee754,
-    ieee754_to_decimal_str,
-    ieee_add,
-    ieee_sub,
-    ieee_mul,
-    ieee_div,
-)
-from .bcd5421 import encode_5421_bcd, decode_5421_bcd, add_5421_bcd
+if __package__ in (None, ""):
+    # Allow running as a plain script: `python src/bitarith/__main__.py`.
+    src_root = os.path.dirname(os.path.dirname(__file__))
+    if src_root not in sys.path:
+        sys.path.insert(0, src_root)
+
+    from bitarith.int_codes import (
+        int_to_sign_magnitude,
+        int_to_ones_complement,
+        int_to_twos_complement,
+        sign_magnitude_to_int,
+        ones_complement_to_int,
+        twos_complement_to_int,
+        twos_add,
+        twos_subtract,
+    )
+    from bitarith.sign_magnitude_ops import signmag_multiply, signmag_divide_fixed5
+    from bitarith.ieee754 import (
+        decimal_str_to_ieee754,
+        ieee754_to_decimal_str,
+        ieee_add,
+        ieee_sub,
+        ieee_mul,
+        ieee_div,
+    )
+    from bitarith.bcd5421 import encode_5421_bcd, decode_5421_bcd, add_5421_bcd
+else:
+    from .int_codes import (
+        int_to_sign_magnitude,
+        int_to_ones_complement,
+        int_to_twos_complement,
+        sign_magnitude_to_int,
+        ones_complement_to_int,
+        twos_complement_to_int,
+        twos_add,
+        twos_subtract,
+    )
+    from .sign_magnitude_ops import signmag_multiply, signmag_divide_fixed5
+    from .ieee754 import (
+        decimal_str_to_ieee754,
+        ieee754_to_decimal_str,
+        ieee_add,
+        ieee_sub,
+        ieee_mul,
+        ieee_div,
+    )
+    from .bcd5421 import encode_5421_bcd, decode_5421_bcd, add_5421_bcd
 
 
 def bits_to_str(bits: List[int]) -> str:
@@ -126,7 +155,9 @@ def main() -> None:
             res = signmag_divide_fixed5(a, b)
             print("\nA (прямой):", bits_to_str(int_to_sign_magnitude(a)), "dec:", a)
             print("B (прямой):", bits_to_str(int_to_sign_magnitude(b)), "dec:", b)
-            print("RES bits:", bits_to_str(res.bits))
+            print("RES bits (целая часть):", bits_to_str(res.bits))
+            if not res.div_by_zero:
+                print("RES bin (с дробной частью):", res.binary_str)
             print("RES dec (точность 5):", res.as_float_str, "div0=", res.div_by_zero, "overflow=", res.overflow)
             continue
 

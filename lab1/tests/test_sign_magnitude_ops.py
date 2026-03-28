@@ -13,6 +13,16 @@ class TestSignMagnitudeOps(unittest.TestCase):
         r2 = signmag_divide_fixed5(-3, 2)
         self.assertEqual(r2.as_float_str, "-1.50000")
 
+    def test_divide_fixed5_integer_part_is_decimal(self):
+        r = signmag_divide_fixed5(5, 2)
+        self.assertEqual(r.as_float_str, "2.50000")
+
+    def test_divide_fixed5_with_remainder_rounding(self):
+        r = signmag_divide_fixed5(7, 3)
+        self.assertEqual(r.as_float_str, "2.33333")
+        r_neg = signmag_divide_fixed5(-7, 3)
+        self.assertEqual(r_neg.as_float_str, "-2.33333")
+
     def test_div_by_zero(self):
         r = signmag_divide_fixed5(1, 0)
         self.assertTrue(r.div_by_zero)

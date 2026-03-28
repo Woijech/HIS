@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bitarith"
+version = "0.1.0"
+description = "Bit arithmetic algorithms (int codes, IEEE-754, BCD 5421)"
+readme = "README.md"
+requires-python = ">=3.10"
+
+[project.scripts]
+bitarith = "bitarith.__main__:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]

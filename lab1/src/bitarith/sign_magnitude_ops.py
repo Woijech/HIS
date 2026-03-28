@@ -126,15 +126,16 @@ def signmag_divide_fixed5(a_dec: int, b_dec: int) -> SignMagFixed5Result:
     mag_bits = int_to_bits_unsigned(int_q_wrapped, MAG_BITS)
     bits = [sign] + mag_bits
 
-    int_str = "".join(str(b) for b in int_quotient).lstrip("0") or "0"
+    int_bin_str = "".join(str(b) for b in int_quotient).lstrip("0") or "0"
     frac_str = "".join(str(b) for b in frac_quotient)
 
     frac_val = bits_to_int_unsigned(frac_quotient)
     dec5 = (frac_val * 100000 + (1 << FRAC_BITS) // 2) // (1 << FRAC_BITS)
     dec5_str = str(dec5).zfill(5)[:5]
 
-    as_str = ("-" if sign else "") + int_str + "." + dec5_str
-    bin_str = ("-" if sign else "") + int_str + "." + frac_str
+    int_dec_str = str(int_q)
+    as_str = ("-" if sign else "") + int_dec_str + "." + dec5_str
+    bin_str = ("-" if sign else "") + int_bin_str + "." + frac_str
 
     scaled_q = int_q * 100000 + dec5
     scaled_signed = -scaled_q if sign else scaled_q

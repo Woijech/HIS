@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "logiclab"
+version = "1.0.0"
+description = "Lab 2: truth tables, canonical forms, minimization and Karnaugh maps"
+requires-python = ">=3.10"
+
+[project.optional-dependencies]
+dev = [
+    "coverage",
+]
+
+[project.scripts]
+logiclab = "logiclab.presentation.console:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["logiclab*"]
+
+[tool.coverage.run]
+source = ["logiclab"]
+
+[tool.coverage.report]
+show_missing = true

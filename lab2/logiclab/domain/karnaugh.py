@@ -28,6 +28,7 @@ class KarnaughGroup:
 class KarnaughMap:
     layers: Tuple[KarnaughLayer, ...]
     groups: Tuple[KarnaughGroup, ...]
+    zero_groups: Tuple[KarnaughGroup, ...]
 
 
 def _pattern_to_term(pattern: BitPattern, variables: Sequence[str]) -> str:
@@ -39,14 +40,50 @@ def _pattern_to_term(pattern: BitPattern, variables: Sequence[str]) -> str:
     return '1' if not parts else ' & '.join(parts)
 
 
+def _pattern_to_clause(pattern: BitPattern, variables: Sequence[str]) -> str:
+    parts = []
+    for variable, bit in zip(variables, pattern):
+        if bit is None:
+            continue
+        parts.append(variable if bit == 0 else f'!{variable}')
+    if not parts:
+        return '0'
+    if len(parts) == 1:
+        return parts[0]
+    return '(' + ' | '.join(parts) + ')'
+
+
 def _contains(pattern: BitPattern, bits: Sequence[int]) -> bool:
     return all(mask is None or mask == bit for mask, bit in zip(pattern, bits))
+
+
+def _build_groups(
+    variables: Sequence[str],
+    truth_map: Dict[Tuple[int, ...], int],
+    selected_implicants: Sequence[Implicant],
+    target_value: int,
+) -> Tuple[KarnaughGroup, ...]:
+    groups: List[KarnaughGroup] = []
+    term_renderer = _pattern_to_term if target_value == 1 else _pattern_to_clause
+    for implicant in selected_implicants:
+        cells: List[str] = []
+        for bits, value in truth_map.items():
+            if value == target_value and _contains(implicant.pattern, bits):
+                cells.append(''.join(str(bit) for bit in bits) or '∅')
+        groups.append(
+            KarnaughGroup(
+                term=term_renderer(implicant.pattern, variables),
+                cells=tuple(sorted(cells)),
+            )
+        )
+    return tuple(groups)
 
 
 def build_karnaugh_map(
     variables: Sequence[str],
     truth_map: Dict[Tuple[int, ...], int],
     selected_implicants: Sequence[Implicant],
+    zero_implicants: Sequence[Implicant] = (),
 ) -> KarnaughMap:
     variables = tuple(variables)
     size = len(variables)
@@ -63,10 +100,8 @@ def build_karnaugh_map(
                     values=((truth_map[tuple()],),),
                 ),
             ),
-            groups=tuple(
-                KarnaughGroup(term=_pattern_to_term(implicant.pattern, variables), cells=('∅',))
-                for implicant in selected_implicants
-            ),
+            groups=_build_groups(variables, truth_map, selected_implicants, 1),
+            zero_groups=_build_groups(variables, truth_map, zero_implicants, 0),
         )
 
     if size == 1:
@@ -127,12 +162,8 @@ def build_karnaugh_map(
             )
         )
 
-    groups: List[KarnaughGroup] = []
-    for implicant in selected_implicants:
-        cells: List[str] = []
-        for bits, value in truth_map.items():
-            if value == 1 and _contains(implicant.pattern, bits):
-                cells.append(''.join(str(bit) for bit in bits))
-        groups.append(KarnaughGroup(term=_pattern_to_term(implicant.pattern, variables), cells=tuple(sorted(cells))))
-
-    return KarnaughMap(layers=tuple(layers), groups=tuple(groups))
+    return KarnaughMap(
+        layers=tuple(layers),
+        groups=_build_groups(variables, truth_map, selected_implicants, 1),
+        zero_groups=_build_groups(variables, truth_map, zero_implicants, 0),
+    )

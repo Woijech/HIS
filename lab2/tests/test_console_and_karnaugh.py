@@ -87,6 +87,15 @@ class ConsoleAndKarnaughTests(unittest.TestCase):
         self.assertIn('Склеивания нет.', report)
         self.assertIn('функция тождественно равна 0', report)
 
+    def test_render_report_contains_symmetric_minimization_sections(self) -> None:
+        result = analyze_expression('a&b')
+        report = render_report(result)
+        self.assertIn('Минимизация по СДНФ:', report)
+        self.assertIn('Минимизация по СКНФ:', report)
+        self.assertIn('Таблица покрытия для СКНФ', report)
+        self.assertIn('Группы нулей:', report)
+        self.assertIn('Итоговая КНФ: a & b', report)
+
     def test_build_karnaugh_map_rejects_too_many_variables(self) -> None:
         with self.assertRaises(ValueError):
             build_karnaugh_map(('a', 'b', 'c', 'd', 'e', 'f'), {}, ())

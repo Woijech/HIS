@@ -40,6 +40,7 @@ class PostClasses:
 @dataclass(frozen=True)
 class DerivativeInfo:
     variables: Tuple[str, ...]
+    remaining_variables: Tuple[str, ...]
     truth_vector: Tuple[int, ...]
     index_binary: str
     index_decimal: int
@@ -57,4 +58,5 @@ class AnalysisResult:
     fictive_variables: Tuple[str, ...]
     derivatives: Tuple[DerivativeInfo, ...]
     minimization: MinimizationResult
+    maxterm_minimization: MinimizationResult
     karnaugh: KarnaughMap

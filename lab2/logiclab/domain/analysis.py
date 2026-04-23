@@ -29,11 +29,15 @@ def evaluate_expression(expr: Expr, variables: Sequence[str]) -> Tuple[TruthRow,
 
 
 def _build_minterm(bits: Assignment, variables: Sequence[str]) -> str:
+    if not variables:
+        return '1'
     parts = [variable if bit == 1 else f'!{variable}' for variable, bit in zip(variables, bits)]
     return '(' + ' & '.join(parts) + ')'
 
 
 def _build_maxterm(bits: Assignment, variables: Sequence[str]) -> str:
+    if not variables:
+        return '0'
     parts = [variable if bit == 0 else f'!{variable}' for variable, bit in zip(variables, bits)]
     return '(' + ' | '.join(parts) + ')'
 
@@ -132,9 +136,13 @@ def build_post_classes(rows: Sequence[TruthRow]) -> PostClasses:
 
 def _derivative_truth_vector(expr: Expr, variables: Sequence[str], derivative_variables: Sequence[str]) -> Tuple[int, ...]:
     indexes = [variables.index(variable) for variable in derivative_variables]
+    remaining_variables = tuple(variable for variable in variables if variable not in derivative_variables)
+    remaining_indexes = [variables.index(variable) for variable in remaining_variables]
     vector: List[int] = []
-    for bits in iter_assignments(variables):
-        base = list(bits)
+    for remaining_bits in iter_assignments(remaining_variables):
+        base = [0] * len(variables)
+        for position, bit in zip(remaining_indexes, remaining_bits):
+            base[position] = bit
         total = 0
         for toggle_size in range(2 ** len(indexes)):
             toggled = base[:]
@@ -153,11 +161,16 @@ def build_derivatives(expr: Expr, variables: Sequence[str]) -> Tuple[DerivativeI
     for size in range(1, limit + 1):
         for subset in combinations(variables, size):
             vector = _derivative_truth_vector(expr, variables, subset)
-            rows = tuple(TruthRow(values=bits, result=value) for bits, value in zip(iter_assignments(variables), vector))
-            canonical = build_canonical_forms(rows, variables)
+            remaining_variables = tuple(variable for variable in variables if variable not in subset)
+            rows = tuple(
+                TruthRow(values=bits, result=value)
+                for bits, value in zip(iter_assignments(remaining_variables), vector)
+            )
+            canonical = build_canonical_forms(rows, remaining_variables)
             derivatives.append(
                 DerivativeInfo(
                     variables=tuple(subset),
+                    remaining_variables=remaining_variables,
                     truth_vector=vector,
                     index_binary=canonical.index_binary,
                     index_decimal=canonical.index_decimal,
@@ -181,6 +194,26 @@ def selected_implicants_to_dnf(implicants: Sequence[Implicant], variables: Seque
         return '0'
     parts = [_implicant_to_expression(implicant.pattern, variables) for implicant in implicants]
     return ' | '.join(parts)
+
+
+def _implicant_to_maxterm(pattern: BitPattern, variables: Sequence[str]) -> str:
+    parts = []
+    for variable, bit in zip(variables, pattern):
+        if bit is None:
+            continue
+        parts.append(variable if bit == 0 else f'!{variable}')
+    if not parts:
+        return '0'
+    if len(parts) == 1:
+        return parts[0]
+    return '(' + ' | '.join(parts) + ')'
+
+
+def selected_implicants_to_cnf(implicants: Sequence[Implicant], variables: Sequence[str]) -> str:
+    if not implicants:
+        return '1'
+    parts = [_implicant_to_maxterm(implicant.pattern, variables) for implicant in implicants]
+    return ' & '.join(parts)
 
 
 def _find_fictive_variables(expr: Expr, variables: Sequence[str]) -> Tuple[str, ...]:
@@ -207,8 +240,14 @@ def analyze_expression(text: str) -> AnalysisResult:
     fictive_variables = _find_fictive_variables(expr, variables)
     derivatives = build_derivatives(expr, variables)
     minimization = minimize_minterms(canonical.minterms, len(variables))
+    maxterm_minimization = minimize_minterms(canonical.maxterms, len(variables))
     truth_map = {row.values: row.result for row in rows}
-    karnaugh = build_karnaugh_map(variables, truth_map, minimization.selected_implicants)
+    karnaugh = build_karnaugh_map(
+        variables,
+        truth_map,
+        minimization.selected_implicants,
+        maxterm_minimization.selected_implicants,
+    )
 
     return AnalysisResult(
         expression=text,
@@ -220,5 +259,6 @@ def analyze_expression(text: str) -> AnalysisResult:
         fictive_variables=fictive_variables,
         derivatives=derivatives,
         minimization=minimization,
+        maxterm_minimization=maxterm_minimization,
         karnaugh=karnaugh,
     )

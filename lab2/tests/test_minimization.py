@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from logiclab.domain.analysis import analyze_expression, selected_implicants_to_dnf
+from logiclab.domain.analysis import analyze_expression, selected_implicants_to_cnf, selected_implicants_to_dnf
 from logiclab.domain.minimization import combine_patterns, index_to_bits, minimize_minterms
 
 
@@ -34,6 +34,11 @@ class MinimizationTests(unittest.TestCase):
         result = analyze_expression('a|!a')
         minimized = selected_implicants_to_dnf(result.minimization.selected_implicants, result.variables)
         self.assertEqual(minimized, '1')
+
+    def test_selected_implicants_are_rendered_as_expected_cnf(self) -> None:
+        result = analyze_expression('a&b')
+        minimized = selected_implicants_to_cnf(result.maxterm_minimization.selected_implicants, result.variables)
+        self.assertEqual(minimized, 'a & b')
 
     def test_minimize_minterms_returns_cover_for_all_requested_minterms(self) -> None:
         result = minimize_minterms((0, 1, 2, 5, 6), 3)

@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hashlab"
+version = "1.0.0"
+description = "Lab 4: hash table with balanced-tree chaining"
+requires-python = ">=3.10"
+
+[project.optional-dependencies]
+dev = [
+    "coverage",
+]
+
+[project.scripts]
+hashlab = "hashlab.presentation.console:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["hashlab*"]
+
+[tool.coverage.run]
+source = ["hashlab"]
+
+[tool.coverage.report]
+show_missing = true

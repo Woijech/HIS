@@ -44,9 +44,15 @@ class AnalysisTests(unittest.TestCase):
     def test_analyze_expression_builds_boolean_derivatives(self) -> None:
         result = analyze_expression('a&b')
         derivatives = {item.variables: item for item in result.derivatives}
-        self.assertEqual(derivatives[('a',)].index_binary, '0101')
-        self.assertEqual(derivatives[('b',)].index_binary, '0011')
-        self.assertEqual(derivatives[('a', 'b')].index_binary, '1111')
+        self.assertEqual(derivatives[('a',)].remaining_variables, ('b',))
+        self.assertEqual(derivatives[('a',)].index_binary, '01')
+        self.assertEqual(derivatives[('a',)].sdnf, '(b)')
+        self.assertEqual(derivatives[('b',)].remaining_variables, ('a',))
+        self.assertEqual(derivatives[('b',)].index_binary, '01')
+        self.assertEqual(derivatives[('b',)].sdnf, '(a)')
+        self.assertEqual(derivatives[('a', 'b')].remaining_variables, ())
+        self.assertEqual(derivatives[('a', 'b')].index_binary, '1')
+        self.assertEqual(derivatives[('a', 'b')].sdnf, '1')
 
     def test_analyze_expression_supports_constant_expression(self) -> None:
         result = analyze_expression('1')

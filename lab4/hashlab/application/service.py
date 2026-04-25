@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from typing import Final
 
 from ..domain.hash_table import HashTable
@@ -24,7 +22,7 @@ DEMO_RECORDS: Final[tuple[tuple[str, str], ...]] = (
 
 class HashTableService:
     def __init__(self, capacity: int = 20, base_address: int = 0) -> None:
-        self._table = HashTable[str](capacity=capacity, base_address=base_address)
+        self._table = HashTable(capacity=capacity, base_address=base_address)
 
     @property
     def capacity(self) -> int:
@@ -40,29 +38,29 @@ class HashTableService:
     def bucket_size(self, bucket_index: int) -> int:
         return self._table.bucket_size(bucket_index)
 
-    def insert_record(self, key: str, value: str) -> HashTableEntry[str]:
+    def insert_record(self, key: str, value: str) -> HashTableEntry:
         return self._table.insert(key, value)
 
-    def find_record(self, key: str) -> HashTableEntry[str]:
+    def find_record(self, key: str) -> HashTableEntry:
         return self._table.get(key)
 
-    def update_record(self, key: str, value: str) -> HashTableEntry[str]:
+    def update_record(self, key: str, value: str) -> HashTableEntry:
         return self._table.update(key, value)
 
-    def delete_record(self, key: str) -> HashTableEntry[str]:
+    def delete_record(self, key: str) -> HashTableEntry:
         return self._table.delete(key)
 
     def clear(self) -> None:
         self._table.clear()
 
-    def snapshot(self) -> tuple[BucketSnapshot[str], ...]:
+    def snapshot(self) -> tuple[BucketSnapshot, ...]:
         return self._table.snapshot()
 
     def statistics(self) -> TableStatistics:
         return self._table.statistics()
 
-    def load_demo_records(self) -> tuple[HashTableEntry[str], ...]:
-        inserted: list[HashTableEntry[str]] = []
+    def load_demo_records(self) -> tuple[HashTableEntry, ...]:
+        inserted: list[HashTableEntry] = []
         for key, value in DEMO_RECORDS:
             inserted.append(self.insert_record(key, value))
         return tuple(inserted)

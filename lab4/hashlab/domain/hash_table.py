@@ -1,22 +1,15 @@
-from __future__ import annotations
-
-from typing import Generic, TypeVar
-
 from .avl_tree import AVLTree
 from .exceptions import DuplicateKeyError, InvalidKeyError, KeyNotFoundError
-from .hashing import AddressStrategy, FirstLettersKeyEncoder, KeyEncoder, ModuloHashAddressStrategy
+from .hashing import FirstLettersKeyEncoder, ModuloHashAddressStrategy
 from .models import BucketSnapshot, HashTableEntry, KeyDiagnostics, TableStatistics
 
 
-ValueT = TypeVar('ValueT')
-
-
-class HashTable(Generic[ValueT]):
+class HashTable:
     def __init__(
         self,
         capacity: int,
-        key_encoder: KeyEncoder | None = None,
-        address_strategy: AddressStrategy | None = None,
+        key_encoder: FirstLettersKeyEncoder | None = None,
+        address_strategy: ModuloHashAddressStrategy | None = None,
         base_address: int = 0,
     ) -> None:
         if capacity <= 0:
@@ -28,7 +21,7 @@ class HashTable(Generic[ValueT]):
         self._base_address = base_address
         self._key_encoder = key_encoder or FirstLettersKeyEncoder()
         self._address_strategy = address_strategy or ModuloHashAddressStrategy()
-        self._buckets = [AVLTree[HashTableEntry[ValueT]]() for _ in range(capacity)]
+        self._buckets = [AVLTree() for _ in range(capacity)]
         self._size = 0
 
     @property
@@ -44,7 +37,7 @@ class HashTable(Generic[ValueT]):
         return self._size
 
     def clear(self) -> None:
-        self._buckets = [AVLTree[HashTableEntry[ValueT]]() for _ in range(self._capacity)]
+        self._buckets = [AVLTree() for _ in range(self._capacity)]
         self._size = 0
 
     def inspect_key(self, key: str) -> KeyDiagnostics:
@@ -69,7 +62,7 @@ class HashTable(Generic[ValueT]):
         self._ensure_bucket_index(bucket_index)
         return len(self._buckets[bucket_index])
 
-    def insert(self, key: str, value: ValueT) -> HashTableEntry[ValueT]:
+    def insert(self, key: str, value: str) -> HashTableEntry:
         diagnostics = self.inspect_key(key)
         lookup_key = self._lookup_key(diagnostics.key)
         bucket = self._buckets[diagnostics.bucket_index]
@@ -86,7 +79,7 @@ class HashTable(Generic[ValueT]):
         self._size += 1
         return entry
 
-    def get(self, key: str) -> HashTableEntry[ValueT]:
+    def get(self, key: str) -> HashTableEntry:
         diagnostics = self.inspect_key(key)
         bucket = self._buckets[diagnostics.bucket_index]
         try:
@@ -94,20 +87,25 @@ class HashTable(Generic[ValueT]):
         except KeyNotFoundError as error:
             raise KeyNotFoundError(f"Ключ '{diagnostics.key}' не найден в таблице.") from error
 
-    def update(self, key: str, value: ValueT) -> HashTableEntry[ValueT]:
-        current = self.get(key)
+    def update(self, key: str, value: str) -> HashTableEntry:
+        diagnostics = self.inspect_key(key)
+        lookup_key = self._lookup_key(diagnostics.key)
+        bucket = self._buckets[diagnostics.bucket_index]
+        try:
+            current = bucket.get(lookup_key)
+        except KeyNotFoundError as error:
+            raise KeyNotFoundError(f"Ключ '{diagnostics.key}' не найден в таблице.") from error
+
         updated = HashTableEntry(
             key=current.key,
             value=value,
             numeric_value=current.numeric_value,
             hash_address=current.hash_address,
         )
-        diagnostics = self.inspect_key(key)
-        bucket = self._buckets[diagnostics.bucket_index]
-        bucket.replace(self._lookup_key(diagnostics.key), updated)
+        bucket.replace(lookup_key, updated)
         return updated
 
-    def delete(self, key: str) -> HashTableEntry[ValueT]:
+    def delete(self, key: str) -> HashTableEntry:
         diagnostics = self.inspect_key(key)
         bucket = self._buckets[diagnostics.bucket_index]
         try:
@@ -125,13 +123,7 @@ class HashTable(Generic[ValueT]):
         bucket = self._buckets[diagnostics.bucket_index]
         return bucket.contains(self._lookup_key(diagnostics.key))
 
-    def items(self) -> tuple[HashTableEntry[ValueT], ...]:
-        entries: list[HashTableEntry[ValueT]] = []
-        for bucket in self._buckets:
-            entries.extend(bucket.values())
-        return tuple(entries)
-
-    def bucket_snapshot(self, bucket_index: int) -> BucketSnapshot[ValueT]:
+    def bucket_snapshot(self, bucket_index: int) -> BucketSnapshot:
         self._ensure_bucket_index(bucket_index)
         bucket = self._buckets[bucket_index]
         root = bucket.root_value
@@ -144,7 +136,7 @@ class HashTable(Generic[ValueT]):
             entries=bucket.values(),
         )
 
-    def snapshot(self) -> tuple[BucketSnapshot[ValueT], ...]:
+    def snapshot(self) -> tuple[BucketSnapshot, ...]:
         return tuple(self.bucket_snapshot(index) for index in range(self._capacity))
 
     def statistics(self) -> TableStatistics:
@@ -170,7 +162,8 @@ class HashTable(Generic[ValueT]):
         if not 0 <= bucket_index < self._capacity:
             raise IndexError('Индекс корзины вне диапазона таблицы.')
 
-    def _normalize_key(self, key: str) -> str:
+    @staticmethod
+    def _normalize_key(key: str) -> str:
         if key is None:
             raise InvalidKeyError('Ключ не должен быть пустым.')
         normalized = ' '.join(key.split())
@@ -178,5 +171,6 @@ class HashTable(Generic[ValueT]):
             raise InvalidKeyError('Ключ не должен быть пустым.')
         return normalized
 
-    def _lookup_key(self, key: str) -> str:
+    @staticmethod
+    def _lookup_key(key: str) -> str:
         return key.casefold()

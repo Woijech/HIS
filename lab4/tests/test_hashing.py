@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import unittest
 
 from hashlab.domain.exceptions import InvalidKeyError
@@ -24,6 +22,18 @@ class TestHashing(unittest.TestCase):
             self.encoder.to_numeric('А')
         with self.assertRaises(InvalidKeyError):
             self.encoder.to_numeric('   ')
+
+    def test_encoder_rejects_invalid_configuration(self) -> None:
+        with self.assertRaises(ValueError):
+            FirstLettersKeyEncoder(letters_count=0)
+        with self.assertRaises(ValueError):
+            FirstLettersKeyEncoder(alphabet=())
+
+    def test_hash_address_rejects_invalid_configuration(self) -> None:
+        with self.assertRaises(ValueError):
+            self.strategy.to_address(10, capacity=0)
+        with self.assertRaises(ValueError):
+            self.strategy.to_address(10, capacity=5, base_address=-1)
 
 
 if __name__ == '__main__':

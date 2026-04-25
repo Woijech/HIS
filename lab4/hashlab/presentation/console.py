@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import argparse
 import sys
 from typing import Callable, TextIO
@@ -127,7 +125,7 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def run_console(
+def main(
     argv: list[str] | None = None,
     input_func: InputFunc = input,
     output: TextIO | None = None,
@@ -169,15 +167,3 @@ def run_console(
             _println(stream, f'Ошибка: {error}')
         except Exception as error:  # noqa: BLE001 - console boundary
             _println(stream, f'Непредвиденная ошибка: {error}')
-
-
-def main(
-    argv: list[str] | None = None,
-    input_func: InputFunc = input,
-    output: TextIO | None = None,
-) -> int:
-    return run_console(argv=argv, input_func=input_func, output=output)
-
-
-if __name__ == '__main__':
-    raise SystemExit(main())

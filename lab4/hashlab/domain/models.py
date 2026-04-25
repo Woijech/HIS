@@ -1,16 +1,10 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
-from typing import Generic, TypeVar
-
-
-ValueT = TypeVar('ValueT')
 
 
 @dataclass(frozen=True, slots=True)
-class HashTableEntry(Generic[ValueT]):
+class HashTableEntry:
     key: str
-    value: ValueT
+    value: str
     numeric_value: int
     hash_address: int
 
@@ -24,13 +18,13 @@ class KeyDiagnostics:
 
 
 @dataclass(frozen=True, slots=True)
-class BucketSnapshot(Generic[ValueT]):
+class BucketSnapshot:
     bucket_index: int
     hash_address: int
     size: int
     height: int
     root_key: str | None
-    entries: tuple[HashTableEntry[ValueT], ...]
+    entries: tuple[HashTableEntry, ...]
 
 
 @dataclass(frozen=True, slots=True)

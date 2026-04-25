@@ -13,9 +13,6 @@ dev = [
     "coverage",
 ]
 
-[project.scripts]
-hashlab = "hashlab.presentation.console:main"
-
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["hashlab*"]

@@ -1,14 +1,14 @@
 class HashTableError(Exception):
-    """Base exception for hash table domain errors."""
+    """Базовая ошибка хеш-таблицы."""
 
 
 class InvalidKeyError(HashTableError):
-    """Raised when a key cannot be processed by the hashing algorithm."""
+    """Ключ нельзя обработать хеш-функцией."""
 
 
 class DuplicateKeyError(HashTableError):
-    """Raised when an insert operation targets an existing key."""
+    """Запись с таким ключом уже есть в таблице."""
 
 
 class KeyNotFoundError(HashTableError):
-    """Raised when the requested key is absent from the table."""
+    """Запись с таким ключом не найдена."""

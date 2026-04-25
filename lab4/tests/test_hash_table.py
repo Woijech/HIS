@@ -1,15 +1,13 @@
-from __future__ import annotations
-
 import unittest
 
 from hashlab.application.service import DEMO_RECORDS
-from hashlab.domain.exceptions import DuplicateKeyError, KeyNotFoundError
+from hashlab.domain.exceptions import DuplicateKeyError, InvalidKeyError, KeyNotFoundError
 from hashlab.domain.hash_table import HashTable
 
 
 class TestHashTable(unittest.TestCase):
     def setUp(self) -> None:
-        self.table = HashTable[str](capacity=20)
+        self.table = HashTable(capacity=20)
 
     def test_insert_and_get_return_full_entry(self) -> None:
         entry = self.table.insert('Алгоритм', 'Описание алгоритма')
@@ -56,6 +54,50 @@ class TestHashTable(unittest.TestCase):
         self.assertFalse(self.table.contains('дерево'))
         with self.assertRaises(KeyNotFoundError):
             self.table.get('дерево')
+
+    def test_table_rejects_invalid_configuration(self) -> None:
+        with self.assertRaises(ValueError):
+            HashTable(capacity=0)
+        with self.assertRaises(ValueError):
+            HashTable(capacity=5, base_address=-1)
+
+    def test_base_address_is_used_in_hash_address(self) -> None:
+        table = HashTable(capacity=20, base_address=100)
+        entry = table.insert('Алгоритм', 'A')
+
+        self.assertEqual(table.base_address, 100)
+        self.assertEqual(entry.hash_address, 112)
+        self.assertEqual(table.bucket_snapshot(12).hash_address, 112)
+
+    def test_clear_removes_all_records(self) -> None:
+        self.table.insert('Байт', '8 бит')
+        self.table.clear()
+
+        self.assertEqual(self.table.size, 0)
+        self.assertEqual(self.table.statistics().used_buckets, 0)
+
+    def test_invalid_key_and_bucket_errors_are_reported(self) -> None:
+        self.assertFalse(self.table.contains(''))
+        with self.assertRaises(InvalidKeyError):
+            self.table.inspect_key(None)
+        with self.assertRaises(IndexError):
+            self.table.bucket_size(99)
+
+    def test_missing_update_and_delete_raise_domain_error(self) -> None:
+        with self.assertRaises(KeyNotFoundError):
+            self.table.update('Байт', 'новое значение')
+        with self.assertRaises(KeyNotFoundError):
+            self.table.delete('Байт')
+
+    def test_out_of_range_hash_address_is_rejected(self) -> None:
+        class BadAddressStrategy:
+            def to_address(self, numeric_value: int, capacity: int, base_address: int = 0) -> int:
+                return base_address + capacity
+
+        table = HashTable(capacity=5, address_strategy=BadAddressStrategy())
+
+        with self.assertRaises(InvalidKeyError):
+            table.inspect_key('Алгоритм')
 
     def test_statistics_match_demo_dataset_requirements(self) -> None:
         for key, value in DEMO_RECORDS:

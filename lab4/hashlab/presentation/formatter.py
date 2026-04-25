@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from ..domain.models import BucketSnapshot, HashTableEntry, KeyDiagnostics, TableStatistics
 
 
@@ -38,7 +36,7 @@ def render_diagnostics(diagnostics: KeyDiagnostics, collision: bool | None = Non
     return '\n'.join(lines)
 
 
-def render_entry(entry: HashTableEntry[str], title: str = 'Запись') -> str:
+def render_entry(entry: HashTableEntry, title: str = 'Запись') -> str:
     return '\n'.join(
         (
             title,
@@ -50,7 +48,7 @@ def render_entry(entry: HashTableEntry[str], title: str = 'Запись') -> str
     )
 
 
-def render_bucket(bucket: BucketSnapshot[str]) -> str:
+def render_bucket(bucket: BucketSnapshot) -> str:
     header = (
         f'Адрес {bucket.hash_address} '
         f'(bucket={bucket.bucket_index}, size={bucket.size}, '
@@ -69,7 +67,7 @@ def render_bucket(bucket: BucketSnapshot[str]) -> str:
     return '\n'.join(lines)
 
 
-def render_table(buckets: tuple[BucketSnapshot[str], ...]) -> str:
+def render_table(buckets: tuple[BucketSnapshot, ...]) -> str:
     if not buckets:
         return 'Таблица не инициализирована.'
     return '\n\n'.join(render_bucket(bucket) for bucket in buckets)
